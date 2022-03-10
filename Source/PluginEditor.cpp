@@ -26,10 +26,23 @@ ClockmakerAudioProcessorEditor::ClockmakerAudioProcessorEditor (ClockmakerAudioP
     ppqnBoxLabel.setJustificationType(juce::Justification::centred);
     ppqnBoxLabel.attachToComponent(&ppqnSlider, false);
     addAndMakeVisible(&ppqnBoxLabel);
+
+    mulDivSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    mulDivSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    mulDivAttach.reset(new juce::AudioProcessorValueTreeState::SliderAttachment(parameters, "mulDiv", mulDivSlider));
+    addAndMakeVisible(&mulDivSlider);
+
+    mulDivLabel.setText("Mul/Div", juce::dontSendNotification);
+    mulDivLabel.setJustificationType(juce::Justification::centred);
+    mulDivLabel.attachToComponent(&mulDivSlider, false);
+    addAndMakeVisible(&mulDivLabel);
+
+    setLookAndFeel(&style);
 }
 
 ClockmakerAudioProcessorEditor::~ClockmakerAudioProcessorEditor()
 {
+    setLookAndFeel(nullptr);
 }
 
 //==============================================================================
@@ -39,19 +52,22 @@ void ClockmakerAudioProcessorEditor::paint (juce::Graphics& g)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 
     g.setColour (juce::Colours::white);
-    g.setFont (20.0f);
-    g.drawFittedText ("CLOCKMAKER", getLocalBounds(), juce::Justification::centredTop, 1);
+    g.setFont (40.0f);
+    g.drawFittedText ("CLOCKMAKER", getLocalBounds().reduced(padding), juce::Justification::centredTop, 1);
 }
 
 void ClockmakerAudioProcessorEditor::resized()
 {
-    const int padding = 10;
-
     juce::Rectangle<int> area = getLocalBounds().reduced(padding);
 
     int componentWidth = area.getWidth();
     int componentHeight = area.getHeight() / 2;
 
-    ppqnSlider.setSize(componentWidth, componentHeight);
-    ppqnSlider.setBoundsToFit(area.removeFromBottom(componentHeight), juce::Justification::centred, true);
+    area.removeFromTop(componentHeight);
+
+    ppqnSlider.setSize(componentWidth / 2, componentHeight);
+    ppqnSlider.setBoundsToFit(area.removeFromLeft(componentHeight), juce::Justification::centred, true);
+
+    mulDivSlider.setSize(componentWidth / 2, componentHeight);
+    mulDivSlider.setBoundsToFit(area.removeFromLeft(componentHeight), juce::Justification::centred, true);
 }

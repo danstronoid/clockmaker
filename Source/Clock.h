@@ -52,12 +52,19 @@ namespace dingus_dsp
             UpdateDelta();
         }
 
+        // Set the clock multiplier/divider
+        // Positive values will multiply and negative values will divide
+        void SetMulDiv(int mulDiv);
+
     private:
         // The tempo in bpm
         float tempo_{};
 
         // Pulses per quarter note
         int ppqn_{};
+
+        // A multiplier/divider
+        float mulDiv_{ 1.f };
 
         // The current phase.
         float phase_{};

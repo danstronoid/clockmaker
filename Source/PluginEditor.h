@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "Style.h"
 
 //==============================================================================
 /**
@@ -28,9 +29,17 @@ private:
     ClockmakerAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& parameters;
 
+    dingus_dsp::Style style;
+
     juce::Slider ppqnSlider;
     juce::Label ppqnBoxLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> ppqnAttach;
+
+    juce::Slider mulDivSlider;
+    juce::Label mulDivLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mulDivAttach;
+
+    const int padding = 10;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ClockmakerAudioProcessorEditor)
 };

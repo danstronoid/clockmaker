@@ -7,6 +7,8 @@
   <MAINGROUP id="YtYWuc" name="Clockmaker">
     <GROUP id="{746879C0-11CD-4D89-30BD-70FC2158643D}" name="Source">
       <FILE id="ESWpW5" name="Clock.cpp" compile="1" resource="0" file="Source/Clock.cpp"/>
+      <FILE id="D4e0D5" name="Style.cpp" compile="1" resource="0" file="Source/Style.cpp"/>
+      <FILE id="MPmMqW" name="Style.h" compile="0" resource="0" file="Source/Style.h"/>
       <FILE id="rPhrpU" name="Clock.h" compile="0" resource="0" file="Source/Clock.h"/>
       <FILE id="HVvjgE" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>

@@ -12,18 +12,41 @@
 //==============================================================================
 ClockmakerAudioProcessor::ClockmakerAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::mono(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::mono(), true)
-                     #endif
-                       ),
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::mono(), true)
 #endif
-    parameters(*this, nullptr, "parameters", { std::make_unique<juce::AudioParameterInt> ("ppqn", "PPQN", 2, 96, 24) })
+        .withOutput("Output", juce::AudioChannelSet::mono(), true)
+#endif
+    ),
+#endif
+    parameters(*this, nullptr, "parameters", { std::make_unique<juce::AudioParameterInt>("ppqn", "PPQN", 2, 96, 24),
+                                               std::make_unique<juce::AudioParameterInt>("mulDiv", "MulDiv", -8, 8, 0, juce::String(),
+                                                    [](int value, int maxLen)
+                                                    {
+                                                        if (value > 1)
+                                                        {
+                                                            return "x " + juce::String(value);
+                                                        }
+                                                        else if (value < -1)
+                                                        {
+                                                            return "/ " + juce::String(value * -1);
+                                                        }
+
+                                                        return juce::String("x 1");
+                                                    },
+                                                    [](const juce::String& text)
+                                                    {
+                                                        if (text.contains("/"))
+                                                            return text.getTrailingIntValue() * -1;
+
+                                                        return text.getTrailingIntValue();
+                                                    })
+                                              })
 {
     parameters.addParameterListener("ppqn", this);   
+    parameters.addParameterListener("mulDiv", this);
 }
 
 ClockmakerAudioProcessor::~ClockmakerAudioProcessor()
@@ -34,7 +57,9 @@ ClockmakerAudioProcessor::~ClockmakerAudioProcessor()
 void ClockmakerAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
     if (parameterID == "ppqn")
-        dingusClock.SetPpqn(static_cast<int>(newValue));
+        dingusClock.SetPpqn(static_cast<int> (newValue));
+    else if (parameterID == "mulDiv")
+        dingusClock.SetMulDiv(static_cast<int> (newValue));
 }
 
 //==============================================================================
@@ -103,7 +128,8 @@ void ClockmakerAudioProcessor::changeProgramName (int index, const juce::String&
 void ClockmakerAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     dingusClock.Init (sampleRate);
-    dingusClock.SetPpqn (8);
+    parameterChanged("ppqn", *parameters.getRawParameterValue("ppqn"));
+    parameterChanged("mulDiv", *parameters.getRawParameterValue("mulDiv"));
 }
 
 void ClockmakerAudioProcessor::releaseResources()
@@ -140,14 +166,6 @@ bool ClockmakerAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void ClockmakerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    this->getPlayHead()->getCurrentPosition (currentPositionInfo);
-    dingusClock.SetTempo(currentPositionInfo.bpm);
-
-    // Interpolate the number of samples that have passed since the last downbeat
-    double samplesPerQuarter = (60.0 / currentPositionInfo.bpm) * this->getSampleRate();
-    double positionFrac = currentPositionInfo.ppqPosition - static_cast<int>(currentPositionInfo.ppqPosition);
-    double sampleOffset = positionFrac * samplesPerQuarter;
-
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -156,7 +174,15 @@ void ClockmakerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    if (currentPositionInfo.isPlaying || currentPositionInfo.isLooping || currentPositionInfo.isRecording)
+    this->getPlayHead()->getCurrentPosition(currentPositionInfo);
+    dingusClock.SetTempo(currentPositionInfo.bpm);
+
+    // Interpolate the number of samples that have passed since the last downbeat
+    double samplesPerQuarter = (60.0 / currentPositionInfo.bpm) * this->getSampleRate();
+    double positionFrac = currentPositionInfo.ppqPosition - static_cast<int>(currentPositionInfo.ppqPosition);
+    double sampleOffset = positionFrac * samplesPerQuarter;
+
+    if (currentPositionInfo.isPlaying || currentPositionInfo.isRecording)
     {
         for (int channel = 0; channel < totalNumInputChannels; ++channel)
         {
@@ -187,15 +213,18 @@ juce::AudioProcessorEditor* ClockmakerAudioProcessor::createEditor()
 //==============================================================================
 void ClockmakerAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
 void ClockmakerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
+
+    if (xml.get() != nullptr)
+        if (xml->hasTagName (parameters.state.getType()))
+            parameters.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
 //==============================================================================

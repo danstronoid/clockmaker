@@ -39,8 +39,20 @@ void Clock::SetTimeAdvance(int time_samples)
     phase_ = std::fmodf(phase_, juce::MathConstants<float>::twoPi);
 }
 
+void Clock::SetMulDiv(int mulDiv)
+{
+    if (mulDiv < -1.f)
+        mulDiv_ = 1.f / (-1.f * mulDiv);
+    else if (mulDiv > 1.f)
+        mulDiv_ = mulDiv;
+    else
+        mulDiv_ = 1.f;
+
+    UpdateDelta();
+}
+
 void Clock::UpdateDelta()
 {
-    float freq = tempo_ * ppqn_ / 60.f;
+    float freq = tempo_ * ppqn_ * mulDiv_ / 60.f;
     delta_ = juce::MathConstants<float>::twoPi * freq / sample_rate_;
 }
